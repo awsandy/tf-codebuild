@@ -134,9 +134,8 @@ phases:
       - aws --version
       - terraform version -no-color
       - echo "TF_VAR_region=$TF_VAR_region"
-      - #export TF_VAR_cloud9_owner=`echo "arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey"`
+      - export TF_VAR_cloud9_owner=`echo "arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey"`
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey\" ]"`
-      - #cd cloud9
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
       - cp modules/ide/cloud9.tf modules/ide/cloud9.tf.sav
