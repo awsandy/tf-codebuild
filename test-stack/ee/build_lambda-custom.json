@@ -1,0 +1,238 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "Generator": "former2"
+    },
+    "Description": "",
+    "Resources": {
+        "CodeBuildRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/service-role/",
+                "RoleName": "codebuild-ee-tf-eks-service-role",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "codebuild.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "MaxSessionDuration": 3600,
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ]
+            }
+        },
+        "CodeBuildBasePolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "ManagedPolicyName": {
+                    "Fn::Sub": "CodeBuildBasePolicy-ee-tf-eks-${AWS::Region}"
+                },
+                "Path": "/service-role/",
+                "PolicyDocument": {
+                    "Fn::Sub": "{\n    \"Version\": \"2012-10-17\",\n    \"Statement\": [\n        {\n            \"Effect\": \"Allow\",\n            \"Resource\": [\n                \"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/ee-tf-eks\",\n                \"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/ee-tf-eks:*\"\n            ],\n            \"Action\": [\n                \"logs:CreateLogGroup\",\n                \"logs:CreateLogStream\",\n                \"logs:PutLogEvents\"\n            ]\n        },\n        {\n            \"Effect\": \"Allow\",\n            \"Resource\": [\n                \"arn:aws:s3:::ee-tf-eks-s3bucket-*\"\n            ],\n            \"Action\": [\n                \"s3:PutObject\",\n                \"s3:GetObject\",\n                \"s3:GetObjectVersion\",\n                \"s3:GetBucketAcl\",\n                \"s3:GetBucketLocation\"\n            ]\n        },\n        {\n            \"Effect\": \"Allow\",\n            \"Action\": [\n                \"codebuild:CreateReportGroup\",\n                \"codebuild:CreateReport\",\n                \"codebuild:UpdateReport\",\n                \"codebuild:BatchPutTestCases\",\n                \"codebuild:BatchPutCodeCoverages\"\n            ],\n            \"Resource\": [\n                \"arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/ee-tf-eks-*\"\n            ]\n        }\n    ]\n}\n"
+                }
+            }
+        },
+        "CodeBuildProject": {
+            "Type": "AWS::CodeBuild::Project",
+            "Properties": {
+                "Name": "ee-tf-eks",
+                "Source": {
+                    "Type": "S3",
+                    "Location": "event-engine-eu-west-1/tf-codebuild1/"
+                },
+                "Artifacts": {
+                    "Type": "NO_ARTIFACTS"
+                },
+                "Cache": {
+                    "Type": "NO_CACHE"
+                },
+                "Environment": {
+                    "ComputeType": "BUILD_GENERAL1_SMALL",
+                    "Image": "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+                    "ImagePullCredentialsType": "CODEBUILD",
+                    "PrivilegedMode": false,
+                    "Type": "LINUX_CONTAINER"
+                },
+                "ServiceRole": {
+                    "Fn::GetAtt": [
+                        "CodeBuildRole",
+                        "Arn"
+                    ]
+                },
+                "TimeoutInMinutes": 60,
+                "QueuedTimeoutInMinutes": 480,
+                "EncryptionKey": {
+                    "Fn::Sub": "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
+                },
+                "BadgeEnabled": false,
+                "LogsConfig": {
+                    "CloudWatchLogs": {
+                        "Status": "ENABLED"
+                    },
+                    "S3Logs": {
+                        "Status": "DISABLED",
+                        "EncryptionDisabled": false
+                    }
+                }
+            }
+        },
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket"
+        },
+        "S3BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {
+                    "Ref": "S3Bucket"
+                },
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Id": "SSEAndSSLPolicy",
+                    "Statement": [
+                        {
+                            "Sid": "DenyUnEncryptedObjectUploads",
+                            "Effect": "Deny",
+                            "Principal": "*",
+                            "Action": "s3:PutObject",
+                            "Resource": {
+                                "Fn::Sub": "arn:aws:s3:::${S3Bucket}/*"
+                            },
+                            "Condition": {
+                                "StringNotEquals": {
+                                    "s3:x-amz-server-side-encryption": "aws:kms"
+                                }
+                            }
+                        },
+                        {
+                            "Sid": "DenyInsecureConnections",
+                            "Effect": "Deny",
+                            "Principal": "*",
+                            "Action": "s3:*",
+                            "Resource": {
+                                "Fn::Sub": "arn:aws:s3:::${S3Bucket}/*"
+                            },
+                            "Condition": {
+                                "Bool": {
+                                    "aws:SecureTransport": "false"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "LambdaFunctionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "AppendToLogsPolicy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "codebuild:*",
+                                        "s3:*"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+
+        "CustCodeBuild2": {
+            "Type": "Custom::Tf-CodeBuild2",
+            "DependsOn":  "CodeBuildProject",
+            "Properties": {
+              "ServiceToken": { "Fn::GetAtt" : ["LambdaFunction", "Arn"] },
+              "Region": { "Ref": "AWS::Region" },
+              "TFEvents": { "Ref": "TFoper" }
+            }
+          },
+
+        "LambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "TfCodeBuild",
+                "Handler": "index.handler",
+                "Runtime": "python3.8",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaFunctionRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 300,
+                "MemorySize": 1024,
+                "Code": {
+                    "ZipFile": "import boto3\nimport time\nimport json\nimport logging\nimport requests\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\nclient = boto3.client(service_name='codebuild', region_name='eu-west-1')\n\ndef handler(event, context):\n    logger.info(\"Received event: \" + json.dumps(event, indent=2))\n    response_data = {}\n\n    try:\n        if event[\"RequestType\"] == \"Create\":\n            new_build = client.start_build(projectName='ee-tf-eks',environmentVariablesOverride=[\n                {\n                    'name': 'TFOP',\n                    'value': 'apply',\n                    'type': 'PLAINTEXT'\n                },\n            ])\n            buildId = new_build['build']['id']\n            theBuild = client.batch_get_builds(ids=[buildId])\n            buildStatus = theBuild['builds'][0]['buildStatus']\n\n            print(\"Build Status= \"+buildStatus + \" ID = \"+ str(buildId))\n\n            counter = 0\n            while counter < 4:   #capped this, so it just fails if it takes too long\n                time.sleep(10)\n                counter = counter + 1\n                theBuild = client.batch_get_builds(ids=[buildId])\n                buildStatus = theBuild['builds'][0]['buildStatus']\n\n                if buildStatus == 'SUCCEEDED':\n                    buildSucceeded = True\n                    break\n                elif buildStatus == 'FAILED' or buildStatus == 'FAULT' or buildStatus == 'STOPPED' or buildStatus == 'TIMED_OUT':\n                    print(\"Build Status= \"+buildStatus)\n                    break\n                else:\n                    print(str(counter)+ \" Build Status= \"+buildStatus + \" ID = \"+ str(buildId)) \n            print(\"Exit Build Status= \"+buildStatus + \" ID = \"+ str(buildId))\n            response_data[\"message\"] = str(buildStatus)\n    #self.assertTrue(buildSucceeded)\n\n\n        elif event[\"RequestType\"] == \"Delete\":\n\n            logger.debug(\"Delete\")\n        \n        elif event[\"RequestType\"] == \"Update\":\n\n            logger.debug(\"Update\")\n\n\n        # Send SUCCESS response to CloudFormation to notify that resource creation is successful\n        send_response( \"SUCCESS\", event, context, response_data)\n\n\n\n    except Exception as e:\n        logger.error( \"An error occured: {}\".format(e) )\n\n        # Send FAILED response to CloudFormation to notify that resource creation was failed\n        send_response( \"FAILED\", event, context, response_data)\n\n\ndef send_response(status, event, context, data):\n    headers = {\n        \"Content-Type\": \"\"\n    }\n    request_body = {\n            \"Status\": status,\n            \"PhysicalResourceId\" : context.log_stream_name,\n            \"StackId\" : event[\"StackId\"],\n            \"RequestId\" : event[\"RequestId\"],\n            \"LogicalResourceId\" : event[\"LogicalResourceId\"],\n            \"Data\" : data\n    }\n    logger.debug(request_body)\n\n    response = requests.put( event[\"ResponseURL\"], headers=headers, data=json.dumps(request_body) )\n    logger.info(\"Response status code: {}\".format( response.status_code ))\n"
+                },
+                "Layers": [{ "Ref": "libs" }]
+            }
+        },
+        "libs": {
+            "Type": "AWS::Lambda::LayerVersion",
+            "Properties": {
+                "LayerName": "python-requests",
+                "Description": "Dependencies requests app.",
+                "Content": {
+                    "S3Bucket": "event-engine-eu-west-1",
+                    "S3Key": "layers-python/layer.zip"
+                },
+                "CompatibleRuntimes": [
+                    "python3.8"
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "CustomResourceAttribute1": {
+            "Value": {
+                "Fn::GetAtt": [ "CustCodeBuild2","message"]
+            }
+        }
+    },
+    "Parameters" : {
+        "TFoper" : {
+          "Type" : "String",
+          "Default" : "apply",
+          "AllowedValues" : ["apply", "destroy"],
+          "Description" : "Terraform operation apply or destroy."
+        }
+      }
+
+}
+
