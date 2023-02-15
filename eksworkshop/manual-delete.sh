@@ -57,12 +57,18 @@ aws kms delete-alias --alias-name alias/eks-workshop
 aws iam detach-role-policy --role-name eks-workshop-cluster-role --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
 aws iam detach-role-policy --role-name eks-workshop-cluster-role --policy-arn arn:aws:iam::aws:policy/AmazonEKSVPCResourceController
 aws iam delete-role --role-name eks-workshop-cluster-role
+aws iam detach-user-policy --user-name eks-workshop-gitops --policy-arn arn:aws:iam::$acc:policy/eks-workshop-gitops
+aws iam delete-policy --policy-arn arn:aws:iam::$acc:policy/eks-workshop-gitops
+
 ./cleanup.sh module.cluster.module.eks_blueprints_kubernetes_addons
 ./cleanup.sh module.cluster.module.eks_blueprints_ack_addons
 ./cleanup.sh module.cluster.module.eks_blueprints.kubernetes_config_map
 ./cleanup.sh kubernetes_namespace
 ./cleanup.sh kubernetes_service
 ./cleanup.sh module.cluster.module.ec2.helm_release.addon
+# all eks-workshop iam roles, policy attachments and policies
+# event bridge rules
+
 rm -f t*.backup
 
 

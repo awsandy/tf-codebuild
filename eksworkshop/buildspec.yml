@@ -104,7 +104,7 @@ phases:
       - printf "terraform {\n" > $of
       - printf "backend \"s3\" {\n" >> $of
       - printf "bucket = \"%s\"\n" $s3b >> $of
-      - printf "key = \"tfbuild1/terraform.tfstate\"\n" >> $of
+      - printf "key = \"eksworkshopv2/terraform.tfstate\"\n" >> $of
       - printf "region = \"%s\"\n"  $reg >> $of
       - printf "encrypt = \"true\"\n"   >> $of
       - printf "}\n" >> $of
@@ -116,19 +116,15 @@ phases:
       - unzip -qq terraform_1.3.7_linux_amd64.zip
       - mv terraform /usr/local/bin/
       - rm -f terraform_1.3.7_linux_amd64.zip
-
       - #echo "kubectl"
       - #curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
       - #chmod +x ./kubectl
       - #mv ./kubectl /usr/local/bin/kubectl
-      
       - aws sts get-caller-identity
       - echo $AWS_REGION
       - echo $ACCOUNT_ID
       - cd "$CODEBUILD_SRC_DIR"
       - python --version
-      - ls -l
-      - pwd
       - export PATH=/usr/local/bin:$PATH
       - which aws
       - aws --version
@@ -138,13 +134,18 @@ phases:
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey\" ]"`
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
+      - cp ../../backend.tf backend.tf
       - cp modules/ide/cloud9.tf modules/ide/cloud9.tf.sav
       - cp ../../cloud9.tf modules/ide/cloud9.tf
+      - # don't do Cloud9 ?
+      - mv ide.tf ide.tf.sav
       - echo "Terraform TFOP = $TFOP"
       - echo "TF_VAR_cloud9_owner = $TF_VAR_cloud9_owner"
       - echo "TF_VAR_eks_role_arns = $TF_VAR_eks_role_arns"
-      - terraform init -no-color
+      - echo "Terraform init.."
+      - terraform init -no-color > /dev/null
       - date
+      - pwd
       - ls -al
       - | 
         if [[ $TFOP == "apply" ]];then     
@@ -162,7 +163,9 @@ phases:
   post_build:
     commands:
       - echo "completed on `date`"
-
+      - ls -al
+      - cat backend.tf || true
+      - aws s3 ls s3://$s3b/eksworkshopv2/ || true
 artifacts:
   files:
     - '**/*'
