@@ -1,7 +1,7 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
     "Metadata": {
-        "Generator": "former2"
+        "Generator": "awsandy"
     },
     "Description": "",
     "Resources": {
@@ -216,7 +216,17 @@
                     "python3.8"
                 ]
             }
-        }
+        },
+        "MyInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "InstanceProfileName" : "eksworkshop-admin",
+            "Properties": {
+               "Path": "/",
+               "Roles": [ {
+                  "Ref": "CodeBuildRole"
+               } ]
+            }
+         }
     },
     "Outputs": {
         "CustomResourceAttribute1": {

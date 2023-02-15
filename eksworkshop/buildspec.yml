@@ -134,11 +134,12 @@ phases:
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey\" ]"`
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
-      - cp ../../backend.tf backend.tf
+      - cp ../../backend-s3.tf backend-s3.tf
       - cp modules/ide/cloud9.tf modules/ide/cloud9.tf.sav
       - cp ../../cloud9.tf modules/ide/cloud9.tf
       - # don't do Cloud9 ?
       - mv ide.tf ide.tf.sav
+      - mv outputs.tf outputs.tf.sav
       - echo "Terraform TFOP = $TFOP"
       - echo "TF_VAR_cloud9_owner = $TF_VAR_cloud9_owner"
       - echo "TF_VAR_eks_role_arns = $TF_VAR_eks_role_arns"
@@ -164,8 +165,9 @@ phases:
     commands:
       - echo "completed on `date`"
       - ls -al
-      - cat backend.tf || true
+      - cat backend-s3.tf || true
       - aws s3 ls s3://$s3b/eksworkshopv2/ || true
+      - aws sts get-caller-identity --query Arn
 artifacts:
   files:
     - '**/*'
