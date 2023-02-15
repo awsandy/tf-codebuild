@@ -219,8 +219,8 @@
         },
         "MyInstanceProfile": {
             "Type": "AWS::IAM::InstanceProfile",
-            "InstanceProfileName" : "eksworkshop-admin",
             "Properties": {
+               "InstanceProfileName" : "eksworkshop-admin",
                "Path": "/",
                "Roles": [ {
                   "Ref": "CodeBuildRole"

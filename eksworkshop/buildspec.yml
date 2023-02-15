@@ -131,7 +131,7 @@ phases:
       - terraform version -no-color
       - echo "TF_VAR_region=$TF_VAR_region"
       - export TF_VAR_cloud9_owner=`echo "arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey"`
-      - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey\" ]"`
+      - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:role/TeamRole\" ]"`
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
       - cp ../../backend-s3.tf backend-s3.tf
@@ -144,16 +144,22 @@ phases:
       - echo "TF_VAR_cloud9_owner = $TF_VAR_cloud9_owner"
       - echo "TF_VAR_eks_role_arns = $TF_VAR_eks_role_arns"
       - echo "Terraform init.."
-      - terraform init -no-color > /dev/null
       - date
       - pwd
       - ls -al
       - | 
-        if [[ $TFOP == "apply" ]];then     
+        if [[ $TFOP == "apply" ]];then   
+          terraform init -no-color > /dev/null  
+          time terraform apply --auto-approve
+          echo "Build Cloud9 IDE"
+          mv ide.tf.sav ide.tf
+          mv outputs.tf.sav outputs.tf
+          terraform init -no-color > /dev/null 
           time terraform apply --auto-approve
         fi
       - |
         if [[ $TFOP == "destroy" ]];then
+          terraform init -no-color > /dev/null
           terraform destroy -target=module.cluster.module.eks_blueprints_kubernetes_addons --auto-approve
           terraform destroy -target=module.cluster.module.descheduler --auto-approve
           terraform destroy -target=module.cluster.module.eks_blueprints --auto-approve
@@ -168,6 +174,8 @@ phases:
       - cat backend-s3.tf || true
       - aws s3 ls s3://$s3b/eksworkshopv2/ || true
       - aws sts get-caller-identity --query Arn
+      - trc=$(terraform state list | wc -l)
+      - echo "$trc resources in state file"
 artifacts:
   files:
     - '**/*'
