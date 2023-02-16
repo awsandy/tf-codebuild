@@ -53,7 +53,7 @@ phases:
       - #echo "==> AWS CodeBuild Extra Environment Variables:"
       - #echo "==> CI = $CI"
       - #echo "==> CODEBUILD = $CODEBUILD"
-      - #echo "==> CODEBUILD_ACCOUNT_ID = $CODEBUILD_ACCOUNT_ID"
+      - echo "==> CODEBUILD_ACCOUNT_ID = $CODEBUILD_ACCOUNT_ID"
       - #echo "==> CODEBUILD_GIT_AUTHOR = $CODEBUILD_GIT_AUTHOR"
       - #echo "==> CODEBUILD_GIT_AUTHOR_EMAIL = $CODEBUILD_GIT_AUTHOR_EMAIL"
       - #echo "==> CODEBUILD_GIT_BRANCH = $CODEBUILD_GIT_BRANCH"
@@ -64,7 +64,7 @@ phases:
       - #echo "==> CODEBUILD_GIT_MESSAGE = $CODEBUILD_GIT_MESSAGE"
       - #echo "==> CODEBUILD_GIT_TAG = $CODEBUILD_GIT_TAG"
       - #echo "==> CODEBUILD_GIT_MOST_RECENT_TAG = $CODEBUILD_GIT_MOST_RECENT_TAG"
-      - #echo "==> CODEBUILD_PROJECT = $CODEBUILD_PROJECT"
+      - echo "==> CODEBUILD_PROJECT = $CODEBUILD_PROJECT"
       - #echo "==> CODEBUILD_PULL_REQUEST = $CODEBUILD_PULL_REQUEST"
       - if [ "$CODEBUILD_GIT_CLEAN_BRANCH" = "master" ] ; then
           export DEPLOY_DIR='/';
@@ -72,14 +72,14 @@ phases:
           export DEPLOY_DIR=${CODEBUILD_GIT_CLEAN_BRANCH};
         fi
       - echo '***** This is the current env:'
-      - #printenv
+      - printenv
 
 
   build:
     commands:
       # install required binary
-      - echo "yum installs"
-      - "yum -y -q -e 0 install moreutils bash-completion nmap bind-utils"
+      - #echo "yum installs"
+      - #"yum -y -q -e 0 install moreutils bash-completion nmap bind-utils"
       - echo "Install aws cli"
       - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
       - unzip -qq awscliv2.zip
@@ -151,11 +151,18 @@ phases:
         if [[ $TFOP == "apply" ]];then   
           terraform init -no-color > /dev/null  
           time terraform apply --auto-approve
-          echo "Build Cloud9 IDE"
+        fi
+      - | 
+        if [[ $TFOP == "apply" ]];then 
+          echo "Cloud9 IDE"
           mv ide.tf.sav ide.tf
           mv outputs.tf.sav outputs.tf
+          sleep 10
+          echo "Cloud9 IDE - First attempt"
           terraform init -no-color > /dev/null 
-          time terraform apply --auto-approve
+          terraform apply --auto-approve || true 
+          echo "Cloud9 IDE - Second attempt" 
+          terraform apply --auto-approve
         fi
       - |
         if [[ $TFOP == "destroy" ]];then
