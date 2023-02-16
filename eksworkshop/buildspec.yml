@@ -132,7 +132,8 @@ phases:
       - echo "TF_VAR_region=$TF_VAR_region"
       - export TF_VAR_cloud9_owner=`echo "arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey"`
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:role/TeamRole\" ]"`
-      - aws cloud9 create-environment-ec2 --name c9-fix --description "C9 fix - do not use" --instance-type t3.micro --subnet-id subnet-1fab8aEX --automatic-stop-time-minutes 60 --owner-arn $TF_VAR_cloud9_owner
+      - #aws cloud9 create-environment-ec2 --name c9-fix --description "C9 fix - do not use" --instance-type t3.micro --subnet-id subnet-1fab8aEX --automatic-stop-time-minutes 60 --owner-arn $TF_VAR_cloud9_owner
+      - aws iam create-service-linked-role --aws-service-name cloud9.amazonaws.com 2> /dev/null || true
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:role/TeamRole\" ]"`
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
@@ -186,7 +187,7 @@ phases:
       - aws s3 ls s3://$s3b/eksworkshopv2/ || true
       - aws sts get-caller-identity --query Arn
       - trc=$(terraform state list | wc -l)
-      - echo "$trc resources in state file"
+      - echo "$trc resources in state file - expected nnn or more"
 artifacts:
   files:
     - '**/*'
