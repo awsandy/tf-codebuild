@@ -132,14 +132,15 @@ phases:
       - echo "TF_VAR_region=$TF_VAR_region"
       - export TF_VAR_cloud9_owner=`echo "arn:aws:iam::${ACCOUNT_ID}:assumed-role/TeamRole/MasterKey"`
       - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:role/TeamRole\" ]"`
+      - aws cloud9 create-environment-ec2 --name c9-fix --description "C9 fix - do not use" --instance-type t3.micro --subnet-id subnet-1fab8aEX --automatic-stop-time-minutes 60 --owner-arn $TF_VAR_cloud9_owner
+      - export TF_VAR_eks_role_arns=`echo "[ \"arn:aws:iam::${ACCOUNT_ID}:role/TeamRole\" ]"`
       - git clone https://github.com/aws-samples/eks-workshop-v2.git
       - cd eks-workshop-v2/terraform
       - cp ../../backend-s3.tf backend-s3.tf
       - cp modules/ide/cloud9.tf modules/ide/cloud9.tf.sav
-      - cp ../../cloud9.tf modules/ide/cloud9.tf
+      - # not using SSH causes failure ?
+      - #cp ../../cloud9.tf modules/ide/cloud9.tf
       - # don't do Cloud9 ?
-      - mv ide.tf ide.tf.sav
-      - mv outputs.tf outputs.tf.sav
       - echo "Terraform TFOP = $TFOP"
       - echo "TF_VAR_cloud9_owner = $TF_VAR_cloud9_owner"
       - echo "TF_VAR_eks_role_arns = $TF_VAR_eks_role_arns"
@@ -153,11 +154,14 @@ phases:
           time terraform apply --auto-approve
         fi
       - | 
-        if [[ $TFOP == "apply" ]];then 
-          echo "Cloud9 IDE"
+        if [[ $TFOP == "test" ]];then 
+          echo "Cloud9 IDE with SSM"
+          cp ../../cloud9.tf modules/ide/cloud9.tf
+          mv ide.tf ide.tf.sav
+          mv outputs.tf outputs.tf.sav
+          terraform init -no-color > /dev/null
           mv ide.tf.sav ide.tf
           mv outputs.tf.sav outputs.tf
-          sleep 10
           echo "Cloud9 IDE - First attempt"
           terraform init -no-color > /dev/null 
           terraform apply --auto-approve || true 
