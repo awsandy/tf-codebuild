@@ -46,7 +46,7 @@
                 "Name": "ee-tf-eks",
                 "Source": {
                     "Type": "S3",
-                    "Location": "event-engine-eu-west-1/eksworkshop/ee"
+                    "Location": "event-engine-eu-west-1/eksworkshop/ws"
                 },
                 "Artifacts": {
                     "Type": "NO_ARTIFACTS"

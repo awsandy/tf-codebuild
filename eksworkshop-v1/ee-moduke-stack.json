@@ -1,0 +1,105 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Cloud9 Terrform EKS stack",
+    "Resources": {
+        "C9Environment": {
+            "Type": "AWS::Cloud9::EnvironmentEC2",
+            "DependsOn": "AWSCloud9SSMInstanceProfile",
+            "Properties": {
+                "AutomaticStopTimeMinutes": 120,
+                "ConnectionType": "CONNECT_SSM",
+                "Description": "Terraform EKS Workshop",
+                "InstanceType": "t2.small",
+                "Name": "eks-terraform",
+                "OwnerArn": {
+                    "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:assumed-role/TeamRole/MasterKey"
+                },
+                "Tags": [
+                    {
+                        "Key": "workshop",
+                        "Value": "eks-terraform"
+                    }
+                ]
+            }
+        },
+        "eksworkshoprole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "cloud9.amazonaws.com",
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Description": "Service linked role for AWS Cloud9",
+                "Path": "/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ],
+                "RoleName": "eksworkshop-admin"
+            }
+        },
+        "AWSCloud9SSMAccessRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "cloud9.amazonaws.com",
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Description": "Service linked role for AWS Cloud9",
+                "Path": "/service-role/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ],
+                "RoleName": "AWSCloud9SSMAccessRole"
+            }
+        },
+        "AWSCloud9SSMInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "InstanceProfileName": "AWSCloud9SSMInstanceProfile",
+                "Path": "/cloud9/",
+                "Roles": [
+                    {
+                        "Ref": "AWSCloud9SSMAccessRole"
+                    }
+                ]
+            }
+        },
+        "MyInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+               "InstanceProfileName" : "eksworkshop-admin",
+               "Path": "/",
+               "Roles": [ {
+                  "Ref": "eksworkshoprole"
+               } ]
+            }
+         }
+
+    }
+}
